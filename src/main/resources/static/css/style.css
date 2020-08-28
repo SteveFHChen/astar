@@ -1,0 +1,74 @@
+
+div{
+    position: absolute;
+    width: 20px;
+    height: 20px;
+    margin: 1px 1px;
+    background-color: gray;
+    border: 1px dashed #cccccc;
+}
+div#carDiv{
+    background-color: blueviolet;
+    border-radius: 10px;
+}
+input[type="number"],input[type="text"]{
+    padding: 6px;
+    width: 70px;
+}
+
+body{
+    width: 1280px;
+    margin: 0px auto;
+    font-family: "微软雅黑";
+}
+header{
+    width: 1250px;
+    background: #cce;
+    height: 80px;
+    text-align: center;
+    line-height: 80px
+}
+span{
+    font-size: 30px;
+    font-weight: bold;
+    display: inline-block;
+    text-align-last: justify;
+    width: 700px;
+}
+aside{
+    width: 280px;
+}
+section
+{
+    position: relative;
+    margin: 0 auto;
+    width: 998px;
+}
+table{
+    width: 280px;
+    padding: 5px;
+}
+tr{
+    height: 28px;
+}
+button,input[type="button"]{
+    padding: 6px;
+}
+ul{
+    list-style-type: none;
+    height: 200px;
+    overflow-y: auto;
+    padding-inline-start: 0px;
+    border: solid #cccccc 1px;
+}
+li{
+    padding: 5px;
+}
+li:hover{
+    background-color: #eeeeff;
+}
+a{
+    color:#000000;
+    text-decoration:none;
+}
+a:visited,a:hover,a:active {color:#777777;}

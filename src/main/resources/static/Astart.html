@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8">
+		<title></title>
+		<link rel="stylesheet" type="text/css" href="./css/style.css" />
+
+	</head>
+	<body>
+		<header>
+			<span>&nbsp;基于A*算法的无人驾驶模拟系统&nbsp;</span>
+		</header>
+		<section style="position: static; display: flex; width: 1250px;">
+			<aside>
+				<h1>城市地图</h1>
+				<p style="color: #333;">使用说明：可自定义设置地图，设置起点和终点以及不可走的地方，汽车出发前会规划好路线，在汽车行驶过程中可在路上动态设置障碍，汽车会自动绕开障碍，重新寻找路线</p>
+
+				<table>
+
+					<tr>
+						<td colspan="2" style="font-weight: bold;">本地地图：</td>
+					</tr>
+					<tr>
+						<td colspan="2">
+							<button onclick="localMapClick(map1)">地图一</button>
+							<button onclick="localMapClick(map2)">地图二</button>
+							<button onclick="localMapClick(map3)">地图三</button>
+							<button onclick="localMapClick(map4)">地图四</button>
+						</td>
+					</tr>
+					<tr>
+						<td colspan="2"></td>
+					</tr>
+					<tr>
+						<td colspan="2" style="font-weight: bold;">自定义地图：</td>
+					</tr>
+					<tr>
+						<td>列数：</td>
+						<td><input id="rowInput" type="number" value="47" /></td>
+					</tr>
+					<tr>
+						<td>行数：</td>
+						<td><input id="colInput" type="number" value="32"></td>
+					</tr>
+					<tr>
+						<td></td>
+						<td><input id="createMapBtn" type="button" onclick="defaultMap()" value="点击生成地图" /></td>
+					</tr>
+					<tr>
+						<td><input type="text" id="mapName" value="自定义地图"></td>
+						<td><input type="button" id="saveMapBtn" onclick="saveMap()" value="保存地图" /></td>
+					</tr>
+					<tr>
+						<td colspan="2"></td>
+					</tr>
+					<tr>
+						<td style="font-weight: bold;">网络地图</td>
+						<td><input type="button" onclick="loadMap()" value="加载网络地图" /></td>
+					</tr>
+					<tr>
+						<td colspan="2" >
+							<ul id="mapList"></ul>
+						</td>
+					</tr>
+
+					<tr>
+						<td id="prompt" colspan="2" style="color: red; font-weight: bold;">设置地图</td>
+					</tr>
+					<tr>
+						<td><input colspan="2" id="findPoint" type="button" value="开始寻路" style="display: none" /></td>
+					</tr>
+
+				</table>
+			</aside>
+
+			<section id="main" style="margin-top: 20px;">
+				<section id="mapContainer"></section>
+				<section id="carContainer">
+					<div id="carDiv" style="display: none;"></div>
+				</section>
+			</section>
+		</section>
+
+		
+		<script src="/js/jquery.min.js"></script>
+		<script src="js/point.js"></script>
+		<script src="js/map.js"></script>
+		<script src="js/aStar.js"></script>
+		<script src="js/localData.js"></script>
+
+		<script>
+			var tileSize = 20;	//各自尺寸
+
+			var rowInput = document.querySelector("#rowInput");
+			var colInput = document.querySelector("#colInput");
+			var prompt = document.querySelector("#prompt");
+			var findPoint = document.querySelector("#findPoint");
+			var curMap = new StarMap("mapContainer");
+			var state = 0; //状态标识　0选择开始节点标识　1选择结束节点标识 2选择障碍物标识
+			var aStar = new AStar(); //寻路类
+			var car = document.querySelector("#carDiv");
+			var mapNameInput = document.querySelector("#mapName");
+			var saveMapBtn = document.querySelector("#saveMapBtn");
+			var index=0;
+
+			saveMapBtn.disabled = true;	//按钮可点击
+			//生成地图按钮点击
+			function defaultMap(){
+				var col = colInput.value;
+				var row = rowInput.value;
+				setMap(col,row,null);
+				saveMapBtn.disabled = false;	//按钮可点击
+			}
+			//本地地图按钮点击
+			function localMapClick(localMap){
+				setMap(localMap.length,localMap[0].length,localMap);
+			}
+
+
+			//生成地图
+			function setMap(col,row,map) {
+				state = 0;					//当前状态初始化: 0/设置起点  1/设置终点  2/设置障碍物  3/停止设置
+				findPoint.disabled = false;	//按钮可点击
+				car.style.display = "none";	//汽车不可见
+				//curMap.clearMap();
+				curMap.init(col, row, map);
+				aStar.map = curMap.map;
+				aStar.colCount = col;
+				aStar.rowCount = row;
+				//绘制初始化地图并传递格子点击回调函数
+				curMap.drawMap(function() {
+					var colIndex = this.getAttribute("colIndex");
+					var rowIndex = this.getAttribute("rowIndex");
+					if (curMap.getPoint(colIndex, rowIndex) != 0) {
+						if(curMap.getPoint(colIndex, rowIndex) == 4){
+							
+						}else{
+							return;
+						}
+					}
+					if (state == 0) {
+						this.style.backgroundColor = "blue";
+						curMap.setStartPoint(colIndex, rowIndex);
+						aStar.startPoint.x = colIndex;
+						aStar.startPoint.y = rowIndex;
+						state = 1;
+						console.log("起点坐标："+colIndex+","+rowIndex);
+						prompt.innerHTML = "请点击格子，设置终点";
+
+					} else if (state == 1) {
+						this.style.backgroundColor = "yellow";
+						curMap.setEndPoint(colIndex, rowIndex);
+						aStar.endPoint.x = colIndex;
+						aStar.endPoint.y = rowIndex;
+						console.log("终点坐标："+colIndex+","+rowIndex);
+						prompt.innerHTML = "请点击格子，设置障碍物";
+						findPoint.style.display = "block";
+						state = 2;
+					} else if (state == 2) {
+						curMap.setBarPoint(colIndex, rowIndex);
+						//console.log("障碍物坐标："+colIndex+","+rowIndex);
+						this.style.backgroundColor = "black";
+					} else{
+						prompt.innerHTML = "请点击生成地图重新开始";
+					}
+				});
+				curMap.drawBars();
+				prompt.innerHTML = "请点击格子，设置起始点";
+			}
+			
+			//开始寻路按钮点击
+			findPoint.onclick = function() {
+				//state = 3;			//停止设置地图
+				this.disabled = true;	//该按钮不可点击
+				var cango = aStar.FindPoint();
+				
+				if(cango){				//如果有通路
+					curMap.drawPoints();
+					carInit();
+					carGo();
+				}else{
+					prompt.innerHTML = "没有通道 请重新设置地图";
+				}
+			}
+			
+
+			//汽车行走和绕开障碍动态规划路线模块
+			function carInit(){
+				index=0;
+				car.style.display = "block";
+			}
+			function carGo(){
+				if(aStar.roadList == null ||aStar.roadList.length == 0){
+					prompt.innerHTML = "没有通道可到终点";
+				}
+				console.log(index);
+				if(index < aStar.roadList.length){
+					var point = aStar.roadList[index];
+					if(curMap.getPoint(point.x,point.y) != 3){
+						//console.log("能走")
+						car.style.top = point.x * tileSize + 5 + "px";
+						car.style.left = point.y * tileSize + 5 + "px";
+						index++;
+						setTimeout("carGo()",700);
+					}else{
+						index--;
+						point = aStar.roadList[index];
+						aStar.startPoint.x = point.x;
+						aStar.startPoint.y = point.y;
+						console.log("起点坐标："+point.x+","+point.y);
+						prompt.innerHTML = "遇到障碍物 重新规划路线";
+						var hasRoad = aStar.FindPoint();
+						if(hasRoad){
+							curMap.drawPoints();
+							carInit();
+							setTimeout("carGo()",700);
+						}else{
+							prompt.innerHTML = "没有通道 请重新设置地图";
+						}
+					}
+				}else{
+				 	console.log("走完");
+					prompt.innerHTML = "成功抵达终点！";
+					alert("成功抵达终点！");
+				}
+			}
+
+
+			//加载网络地图模块
+			var netMap = new Map();
+			function loadMap(){
+				netMap.clear();
+				$('#mapList').empty();
+				$.ajax({url:"/list",success:function(result){
+					//$("#div1").html(result);
+					console.log(result);
+					for(x in result){
+						console.log(result[x].name);
+						netMap.set(result[x].name, result[x]);
+						$('#mapList').append("<a href='JavaScript:void(0)'><li>"+result[x].name+"</li></a>");
+					}
+
+					$('#mapList').find('li').click(function() {
+						var idx = $(this).text();
+						var mapInfo = netMap.get(idx);
+						var data = $.parseJSON(mapInfo.mapData);
+						console.log(data);
+						setMap(data.length,data[0].length,data);
+					});
+				}});
+			}
+
+			function saveMap() {
+				console.log("要保存的地图："+curMap.map);
+				let name=mapNameInput.value;
+				let data=JSON.stringify(curMap.map);
+
+				$.post("http://localhost:8060/insert",
+						{
+							name:name,
+							mapData:data
+						},
+						function(result){
+							if(result == 1){
+								alert("保存成功！")
+							}else{
+								alert("保存失败")
+							}
+						});
+
+			}
+
+		</script>
+		
+	</body>
+</html>
